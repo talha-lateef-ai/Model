@@ -8,13 +8,13 @@ st.set_page_config(page_title="ML Prediction App", page_icon="🤖")
 st.title("🤖 Machine Learning Prediction App")
 st.write("Neeche diye gaye inputs enter karein aur **Predict** button dabayein:")
 
-# Model load karein (joblib + pickle fallback)
+# model.pkl load karein
 @st.cache_resource
 def load_model():
     try:
-        return joblib.load("best_svm_pipeline.pkl")
+        return joblib.load("model.pkl")
     except Exception:
-        with open("best_svm_pipeline.pkl", "rb") as file:
+        with open("model.pkl", "rb") as file:
             return pickle.load(file)
 
 model = load_model()
