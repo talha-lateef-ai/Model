@@ -1,17 +1,19 @@
 
 import streamlit as st
-import joblib
-import pickle
 import numpy as np
 import cv2
+import joblib
+import pickle
+import pandas as pd
 
 from pathlib import Path
 from PIL import Image
 from skimage.feature import graycomatrix, graycoprops
 
-# ==================================================
-# 1. PAGE CONFIGURATION
-# ==================================================
+
+# ==========================================
+# PAGE CONFIGURATION
+# ==========================================
 
 st.set_page_config(
     page_title="DiabeticRetina AI",
@@ -20,9 +22,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ==================================================
-# 2. CUSTOM CSS
-# ==================================================
+
+# ==========================================
+# CUSTOM CSS
+# ==========================================
 
 st.markdown("""
 <style>
@@ -34,175 +37,163 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background:
-    radial-gradient(circle at 80% 0%, #172b55 0%, transparent 35%),
-    linear-gradient(135deg, #071225, #0b1428);
+    background: linear-gradient(135deg, #07111f 0%, #0b1730 55%, #10102a 100%);
     color: #f1f5f9;
 }
 
 .block-container {
-    max-width: 1450px;
     padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1450px;
 }
 
 [data-testid="stSidebar"] {
-    background: #09162b;
-    border-right: 1px solid #233d63;
+    background: #0b1426;
+    border-right: 1px solid #1e3150;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e2e8f0;
 }
 
 .hero {
-    background: linear-gradient(110deg, #102b50, #173c65, #27265c);
-    border: 1px solid #315b91;
-    padding: 32px;
+    background: linear-gradient(110deg, #142c50, #202052);
+    border: 1px solid #29466e;
     border-radius: 22px;
+    padding: 30px;
     margin-bottom: 25px;
 }
 
 .hero h1 {
-    font-size: 40px;
+    font-size: 38px;
     font-weight: 800;
-    color: white;
+    color: #ffffff;
+    margin-bottom: 8px;
 }
 
 .hero p {
-    color: #c5d6ec;
-    font-size: 16px;
+    color: #b7c9e5;
+    font-size: 15px;
 }
 
-.eyebrow {
-    color: #54e6dc;
-    letter-spacing: 2px;
-    font-size: 12px;
+.section-title {
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 20px 0 15px 0;
+}
+
+.metric-card {
+    background: #111f36;
+    border: 1px solid #263e60;
+    border-radius: 16px;
+    padding: 20px;
+    min-height: 115px;
+}
+
+.metric-label {
+    color: #91a9c9;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    color: #ffffff;
+    font-size: 25px;
     font-weight: 800;
-}
-
-.panel {
-    background: #101f38;
-    border: 1px solid #263e61;
-    padding: 23px;
-    border-radius: 18px;
-    margin-bottom: 18px;
-}
-
-.panel-title {
-    font-size: 19px;
-    font-weight: 750;
-    margin-bottom: 15px;
-    color: #f8fafc;
-}
-
-.muted {
-    color: #a7bad3;
-    font-size: 14px;
 }
 
 .result-card {
-    background: linear-gradient(120deg, #103c51, #25275b);
-    border: 1px solid #397b9b;
-    padding: 28px;
+    background: linear-gradient(120deg, #142b47, #1c2250);
+    border: 1px solid #3b5e91;
     border-radius: 20px;
-    text-align: center;
-    margin-top: 20px;
+    padding: 25px;
+    margin-top: 15px;
 }
 
 .result-grade {
-    font-size: 58px;
+    font-size: 42px;
     font-weight: 800;
-    margin: 8px;
+    color: #70d6ff;
 }
 
 .result-name {
-    color: white;
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 700;
+    color: white;
+}
+
+.info-card {
+    background: #111f36;
+    border: 1px solid #263e60;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.info-card h3 {
+    color: #76cfff;
+    font-size: 18px;
+}
+
+.info-card p {
+    color: #b6c5da;
+    font-size: 14px;
+    line-height: 1.7;
 }
 
 div.stButton > button {
-    background: linear-gradient(90deg, #06b6d4, #2563eb, #7c3aed);
-    color: white;
+    width: 100%;
     border: none;
     border-radius: 12px;
-    min-height: 48px;
+    height: 50px;
     font-weight: 700;
-    width: 100%;
+    color: white;
+    background: linear-gradient(90deg, #1677e8, #7555e8);
+    transition: 0.3s;
 }
 
 div.stButton > button:hover {
+    background: linear-gradient(90deg, #278cff, #8b6aff);
+    border: none;
     color: white;
-    border: 1px solid #67e8f9;
-    filter: brightness(1.12);
+    transform: translateY(-2px);
 }
 
-div[data-testid="stFileUploader"] {
-    background: #101f38;
-    border: 1px dashed #397b9b;
+.stFileUploader {
+    background: #101e34;
+    border: 1px dashed #41648e;
     border-radius: 15px;
     padding: 15px;
 }
 
 .footer {
     text-align: center;
-    color: #8298b5;
-    padding: 30px 0;
+    color: #7186a5;
     font-size: 12px;
-}
-
-hr {
-    border-color: #263e61;
+    padding: 25px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# ==================================================
-# 3. DR CLASS INFORMATION
-# ==================================================
 
-DR_CLASSES = {
-    0: {
-        "name": "No DR",
-        "description": "No diabetic retinopathy",
-        "color": "#22c55e"
-    },
-    1: {
-        "name": "Mild DR",
-        "description": "Mild non-proliferative DR",
-        "color": "#eab308"
-    },
-    2: {
-        "name": "Moderate DR",
-        "description": "Moderate non-proliferative DR",
-        "color": "#f97316"
-    },
-    3: {
-        "name": "Severe DR",
-        "description": "Severe non-proliferative DR",
-        "color": "#ef4444"
-    },
-    4: {
-        "name": "Proliferative DR",
-        "description": "Proliferative diabetic retinopathy",
-        "color": "#c084fc"
-    }
-}
-
-# ==================================================
-# 4. MODEL LOADING
-# ==================================================
+# ==========================================
+# MODEL LOADING
+# ==========================================
 
 MODEL_PATH = Path(__file__).resolve().parent / "model.pkl"
 
+
 @st.cache_resource
 def load_model():
-
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
-            f"model.pkl not found at: {MODEL_PATH}"
+            "model.pkl file not found. Place it in the same folder as app.py."
         )
 
     try:
         return joblib.load(MODEL_PATH)
-
     except Exception:
         with open(MODEL_PATH, "rb") as file:
             return pickle.load(file)
@@ -210,25 +201,60 @@ def load_model():
 
 try:
     model = load_model()
-    MODEL_LOADED = True
-    MODEL_ERROR = None
-
-except Exception as e:
+    model_loaded = True
+except Exception as error:
     model = None
-    MODEL_LOADED = False
-    MODEL_ERROR = str(e)
+    model_loaded = False
+    st.error(f"Model loading error: {error}")
 
-# ==================================================
-# 5. FEATURE EXTRACTION
-# ==================================================
+
+# ==========================================
+# DR CLASS INFORMATION
+# ==========================================
+
+DR_CLASSES = {
+    0: {
+        "name": "No Diabetic Retinopathy",
+        "severity": "No DR",
+        "description": "No visible signs of diabetic retinopathy in the predicted class.",
+        "color": "#35d39a"
+    },
+    1: {
+        "name": "Mild Non-Proliferative DR",
+        "severity": "Mild",
+        "description": "The predicted class indicates mild retinal changes.",
+        "color": "#80d8ff"
+    },
+    2: {
+        "name": "Moderate Non-Proliferative DR",
+        "severity": "Moderate",
+        "description": "The predicted class indicates moderate diabetic retinal changes.",
+        "color": "#f5c451"
+    },
+    3: {
+        "name": "Severe Non-Proliferative DR",
+        "severity": "Severe",
+        "description": "The predicted class indicates severe diabetic retinal changes.",
+        "color": "#ff9b54"
+    },
+    4: {
+        "name": "Proliferative Diabetic Retinopathy",
+        "severity": "Proliferative",
+        "description": "The predicted class indicates proliferative diabetic retinopathy.",
+        "color": "#ff657a"
+    }
+}
+
+
+# ==========================================
+# FEATURE EXTRACTION
+# Must match training preprocessing exactly
+# ==========================================
 
 def extract_features(pil_image):
 
     image = np.array(pil_image.convert("RGB"))
-
     image = cv2.resize(image, (224, 224))
-
-    # RGB features
 
     red_mean = np.mean(image[:, :, 0])
     red_std = np.std(image[:, :, 0])
@@ -239,16 +265,9 @@ def extract_features(pil_image):
     blue_mean = np.mean(image[:, :, 2])
     blue_std = np.std(image[:, :, 2])
 
-    # Grayscale
-
-    gray = cv2.cvtColor(
-        image,
-        cv2.COLOR_RGB2GRAY
-    )
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
     gray_quantized = (gray // 32).astype(np.uint8)
-
-    # GLCM
 
     glcm = graycomatrix(
         gray_quantized,
@@ -259,30 +278,16 @@ def extract_features(pil_image):
         normed=True
     )
 
-    contrast = graycoprops(
-        glcm, "contrast"
-    )[0, 0]
-
-    homogeneity = graycoprops(
-        glcm, "homogeneity"
-    )[0, 0]
-
-    energy = graycoprops(
-        glcm, "energy"
-    )[0, 0]
-
-    correlation = graycoprops(
-        glcm, "correlation"
-    )[0, 0]
-
-    # Brightness features
+    contrast = graycoprops(glcm, "contrast")[0, 0]
+    homogeneity = graycoprops(glcm, "homogeneity")[0, 0]
+    energy = graycoprops(glcm, "energy")[0, 0]
+    correlation = graycoprops(glcm, "correlation")[0, 0]
 
     brightness_mean = np.mean(gray)
     brightness_std = np.std(gray)
 
     brightness_range = (
-        np.percentile(gray, 95) -
-        np.percentile(gray, 5)
+        np.percentile(gray, 95) - np.percentile(gray, 5)
     )
 
     features = [
@@ -303,472 +308,356 @@ def extract_features(pil_image):
 
     return np.array([features])
 
-# ==================================================
-# 6. SIDEBAR
-# ==================================================
+
+# ==========================================
+# SIDEBAR
+# ==========================================
 
 with st.sidebar:
 
-    st.markdown(
-        """
-        <div style="text-align:center;padding:15px;">
-            <div style="font-size:48px;">👁️</div>
-            <h2 style="color:white;">DiabeticRetina AI</h2>
-            <p style="color:#54e6dc;font-size:11px;">
-                RETINAL AI SCREENING
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("## 👁️ DiabeticRetina AI")
+    st.caption("AI-powered retinal screening prototype")
 
     st.divider()
 
     page = st.radio(
         "NAVIGATION",
         [
-            "🏠 Home",
-            "🧠 About Project",
-            "⚙️ Model Information",
-            "📊 DR Classification",
-            "⚠️ Disclaimer"
-        ],
-        label_visibility="visible"
+            "🏠 Dashboard",
+            "🔬 DR Classification",
+            "📊 DR Severity Guide",
+            "ℹ️ About Project"
+        ]
     )
 
     st.divider()
 
-    if MODEL_LOADED:
-        st.success("Model Connected")
+    if model_loaded:
+        st.success("Model Loaded Successfully")
     else:
-        st.error("Model Not Connected")
+        st.error("Model Not Available")
 
-    st.caption("Academic AI Project")
+    st.markdown("---")
 
-# ==================================================
-# 7. HOME PAGE
-# ==================================================
+    st.caption("Developed as an academic AI/ML project.")
+    st.caption("Version 1.0")
 
-if page == "🏠 Home":
+
+# ==========================================
+# HEADER
+# ==========================================
+
+st.markdown("""
+<div class="hero">
+    <h1>DiabeticRetina AI 👁️</h1>
+    <p>Retinal Image-Based Diabetic Retinopathy Classification</p>
+    <p>AI-assisted screening prototype using Machine Learning.</p>
+</div>
+""", unsafe_allow_html=True)
+
+
+# ==========================================
+# DASHBOARD
+# ==========================================
+
+if page == "🏠 Dashboard":
+
+    st.markdown('<div class="section-title">System Overview</div>',
+                unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Classification Classes</div>
+            <div class="metric-value">05 Grades</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Model Type</div>
+            <div class="metric-value">SVM</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c3:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Input Image Size</div>
+            <div class="metric-value">224 × 224</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown(
-        """
-        <div class="hero">
-            <div class="eyebrow">
-                ARTIFICIAL INTELLIGENCE • HEALTHCARE
-            </div>
-            <h1>DiabeticRetina AI</h1>
-            <p>
-                Retinal Image-Based Diabetic Retinopathy Classification
-            </p>
-            <p>
-                Upload a retinal fundus image and explore
-                its predicted DR severity class.
-            </p>
-        </div>
-        """,
+        '<div class="section-title">What does this system do?</div>',
         unsafe_allow_html=True
     )
 
-    if MODEL_LOADED:
-        st.success("Machine Learning Model Loaded Successfully")
-    else:
-        st.error(f"Model Loading Error: {MODEL_ERROR}")
+    left, right = st.columns(2)
 
-    upload_col, preview_col = st.columns([1, 1.15])
+    with left:
+        st.markdown("""
+        <div class="info-card">
+            <h3>🔬 Retinal Image Analysis</h3>
+            <p>Upload a retinal fundus image. The system extracts
+            color, brightness and texture-based features for
+            machine learning classification.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with upload_col:
+    with right:
+        st.markdown("""
+        <div class="info-card">
+            <h3>🧠 AI Classification</h3>
+            <p>The trained Support Vector Machine model predicts
+            one of five diabetic retinopathy grades, from Grade 0
+            to Grade 4.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown(
-            '<div class="panel">',
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        '<div class="section-title">Workflow</div>',
+        unsafe_allow_html=True
+    )
 
-        st.markdown(
-            '<div class="panel-title">📤 Upload Retinal Image</div>',
-            unsafe_allow_html=True
-        )
+    st.markdown("""
+    <div class="info-card">
+        <p>
+        <b>01</b> &nbsp; Upload retinal image
+        &nbsp; → &nbsp;
+        <b>02</b> &nbsp; Extract 13 features
+        &nbsp; → &nbsp;
+        <b>03</b> &nbsp; SVM prediction
+        &nbsp; → &nbsp;
+        <b>04</b> &nbsp; Display predicted DR grade
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        uploaded_file = st.file_uploader(
-            "Select a fundus photograph",
-            type=["jpg", "jpeg", "png"]
-        )
 
-        st.markdown(
-            """
-            <p class="muted">
-                Supported formats: JPG, JPEG and PNG<br>
-                Image will be resized to 224 × 224 pixels.
-            </p>
-            """,
-            unsafe_allow_html=True
-        )
+# ==========================================
+# CLASSIFICATION PAGE
+# ==========================================
 
-        st.markdown("</div>", unsafe_allow_html=True)
+elif page == "🔬 DR Classification":
 
-    image = None
+    st.markdown(
+        '<div class="section-title">Retinal Image Screening</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "Upload a retinal fundus image to generate an AI-based DR class prediction."
+    )
+
+    uploaded_file = st.file_uploader(
+        "Upload Fundus Image",
+        type=["jpg", "jpeg", "png"],
+        help="Supported formats: JPG, JPEG and PNG"
+    )
 
     if uploaded_file is not None:
 
-        try:
-            image = Image.open(uploaded_file).convert("RGB")
+        image = Image.open(uploaded_file).convert("RGB")
 
-        except Exception:
-            st.error("Unable to open the uploaded image.")
+        image_col, details_col = st.columns([1.1, 1])
 
-    with preview_col:
+        with image_col:
 
-        st.markdown(
-            '<div class="panel">',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="panel-title">🖼️ Image Preview</div>',
-            unsafe_allow_html=True
-        )
-
-        if image is not None:
+            st.markdown("### Retinal Image Preview")
 
             st.image(
                 image,
+                caption="Uploaded retinal fundus image",
                 use_container_width=True
             )
 
             st.caption(
-                f"Dimensions: {image.width} × {image.height} pixels"
+                f"Image dimensions: {image.width} × {image.height}"
             )
 
-        else:
+        with details_col:
 
-            st.markdown(
-                """
-                <div style="
-                    height:220px;
-                    background:#09172d;
-                    border:1px dashed #315b91;
-                    border-radius:14px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    text-align:center;
-                    color:#9bb1cc;
-                ">
-                    <div>
-                        <div style="font-size:45px;">👁️</div>
-                        Upload an image to preview
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown("### Image Information")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="info-card">
+                <p><b>File name:</b> {uploaded_file.name}</p>
+                <p><b>Image format:</b> {image.format or "Converted to RGB"}</p>
+                <p><b>Color mode:</b> {image.mode}</p>
+                <p><b>Processing size:</b> 224 × 224</p>
+                <p><b>Feature count:</b> 13</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    st.write("")
+        st.markdown("---")
 
-    if image is not None:
+        if st.button("🚀 Analyze Retinal Image", use_container_width=True):
 
-        if st.button(
-            "✦ ANALYZE RETINAL IMAGE",
-            type="primary",
-            use_container_width=True,
-            disabled=not MODEL_LOADED
-        ):
+            if not model_loaded:
+                st.error("Please ensure model.pkl is available.")
 
-            with st.spinner(
-                "Extracting retinal features and predicting DR class..."
-            ):
-
+            else:
                 try:
+                    with st.spinner("Analyzing retinal image..."):
 
-                    features = extract_features(image)
+                        features = extract_features(image)
 
-                    # Feature count validation
+                        prediction = int(model.predict(features)[0])
 
-                    if features.shape[1] != 13:
-                        raise ValueError(
-                            "Expected 13 features."
-                        )
+                        if prediction not in DR_CLASSES:
+                            raise ValueError(
+                                f"Unexpected model output: {prediction}"
+                            )
 
-                    # Model feature count validation
-
-                    expected = getattr(
-                        model,
-                        "n_features_in_",
-                        None
-                    )
-
-                    if expected is not None and expected != 13:
-                        raise ValueError(
-                            f"Model expects {expected} features, "
-                            "but app extracted 13."
-                        )
-
-                    # Prediction
-
-                    prediction = model.predict(features)
-
-                    predicted_class = int(prediction[0])
-
-                    if predicted_class not in DR_CLASSES:
-                        raise ValueError(
-                            "Unexpected predicted class."
-                        )
-
-                    result = DR_CLASSES[predicted_class]
-
-                    st.markdown("---")
-
-                    st.markdown("## 🧠 Analysis Result")
+                    result = DR_CLASSES[prediction]
 
                     st.markdown(
-                        f"""
-                        <div class="result-card">
-                            <div style="color:#65e9df;
-                            font-weight:800;letter-spacing:2px;">
-                                PREDICTED DR SEVERITY
-                            </div>
-
-                            <div class="result-grade"
-                            style="color:{result['color']};">
-                                CLASS {predicted_class}
-                            </div>
-
-                            <div class="result-name">
-                                {result['name']}
-                            </div>
-
-                            <p style="color:#bdcce2;">
-                                {result['description']}
-                            </p>
-                        </div>
-                        """,
+                        '<div class="section-title">AI Prediction Result</div>',
                         unsafe_allow_html=True
                     )
 
-                    # Probability if available
+                    st.markdown(f"""
+                    <div class="result-card">
+                        <div class="metric-label">PREDICTED DR GRADE</div>
+                        <div class="result-grade">Grade {prediction}</div>
+                        <div class="result-name">{result["name"]}</div>
+                        <p style="color:#c1d0e5;">{result["description"]}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
+                    st.markdown("### Severity Indicator")
+
+                    st.progress((prediction + 1) / 5)
+
+                    st.caption(
+                        f"Predicted category: {result['severity']}"
+                    )
+
+                    # Probability chart, if supported
                     if hasattr(model, "predict_proba"):
 
-                        try:
+                        probabilities = model.predict_proba(features)[0]
 
-                            probabilities = model.predict_proba(
-                                features
-                            )[0]
+                        if hasattr(model, "classes_"):
+                            class_labels = [
+                                f"Grade {int(c)}" for c in model.classes_
+                            ]
+                        else:
+                            class_labels = [
+                                f"Class {i}" for i in range(len(probabilities))
+                            ]
 
-                            model_classes = list(model.classes_)
+                        probability_df = pd.DataFrame({
+                            "DR Grade": class_labels,
+                            "Model Probability (%)": probabilities * 100
+                        })
 
-                            index = model_classes.index(
-                                predicted_class
-                            )
+                        st.markdown("### Model Probability Distribution")
 
-                            confidence = (
-                                probabilities[index] * 100
-                            )
+                        st.bar_chart(
+                            probability_df.set_index("DR Grade")
+                        )
 
-                            st.metric(
-                                "Model Probability Estimate",
-                                f"{confidence:.2f}%"
-                            )
-
-                            st.caption(
-                                "This probability is not a clinically "
-                                "validated diagnostic confidence."
-                            )
-
-                        except Exception:
-                            st.info(
-                                "Probability estimates are unavailable."
-                            )
-
-                    # Severity scale
-
-                    st.markdown("### DR Severity Scale")
-
-                    cols = st.columns(5)
-
-                    for i, data in DR_CLASSES.items():
-
-                        with cols[i]:
-
-                            st.markdown(
-                                f"""
-                                <div style="
-                                    background:#101f38;
-                                    border:1px solid {data['color']};
-                                    border-radius:12px;
-                                    padding:12px 5px;
-                                    text-align:center;
-                                ">
-                                    <h2 style="color:{data['color']};">
-                                        {i}
-                                    </h2>
-                                    <p style="font-size:12px;color:white;">
-                                        {data['name']}
-                                    </p>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-
-                    st.markdown("")
+                        st.caption(
+                            "These are model output probabilities, not clinically "
+                            "validated diagnostic confidence scores."
+                        )
 
                     st.warning(
-                        "This is an experimental academic prediction, "
-                        "not a medical diagnosis. Please consult a "
-                        "qualified eye-care professional."
+                        "This result is an AI model prediction, not a medical "
+                        "diagnosis. Please consult a qualified eye-care professional."
                     )
 
-                except Exception as e:
+                except Exception as error:
+                    st.error(f"Prediction failed: {error}")
 
-                    st.error(
-                        f"Prediction failed: {str(e)}"
-                    )
+
+# ==========================================
+# DR SEVERITY GUIDE
+# ==========================================
+
+elif page == "📊 DR Severity Guide":
 
     st.markdown(
-        """
-        <div class="footer">
-            DiabeticRetina AI | Academic Machine Learning Prototype<br>
-            Not intended for clinical diagnosis
-        </div>
-        """,
+        '<div class="section-title">Diabetic Retinopathy Grades</div>',
         unsafe_allow_html=True
     )
 
-# ==================================================
-# 8. ABOUT PROJECT
-# ==================================================
+    for grade, info in DR_CLASSES.items():
 
-elif page == "🧠 About Project":
+        st.markdown(f"""
+        <div class="info-card">
+            <h3 style="color:{info['color']}">
+                Grade {grade} — {info['severity']}
+            </h3>
+            <p><b>{info['name']}</b></p>
+            <p>{info['description']}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("## About DiabeticRetina AI")
 
-    st.write(
-        """
+# ==========================================
+# ABOUT PROJECT
+# ==========================================
+
+elif page == "ℹ️ About Project":
+
+    st.markdown(
+        '<div class="section-title">About DiabeticRetina AI</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div class="info-card">
+        <h3>Project Overview</h3>
+        <p>
         DiabeticRetina AI is an academic machine learning project
         designed to classify diabetic retinopathy severity from
-        retinal fundus photographs.
-        """
-    )
+        retinal fundus images.
+        </p>
+    </div>
 
-    a, b = st.columns(2)
+    <div class="info-card">
+        <h3>Machine Learning Approach</h3>
+        <p>
+        The current prototype extracts 13 handcrafted image features,
+        including RGB statistics, brightness statistics and GLCM
+        texture features. These features are passed to a trained
+        Support Vector Machine (SVM) model.
+        </p>
+    </div>
 
-    with a:
+    <div class="info-card">
+        <h3>Classification Output</h3>
+        <p>
+        The system predicts five categories: No DR, Mild DR,
+        Moderate DR, Severe DR and Proliferative DR.
+        </p>
+    </div>
 
-        st.markdown(
-            """
-            <div class="panel">
-                <div class="panel-title">🎯 Project Objective</div>
-                To explore automated classification of retinal images
-                into five DR severity categories using machine learning.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    <div class="info-card">
+        <h3>Important Medical Disclaimer</h3>
+        <p>
+        This application is an academic prototype and has not been
+        validated as a clinical diagnostic device. It must not be
+        used to diagnose, treat or rule out diabetic retinopathy.
+        A qualified eye-care professional should assess the patient.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with b:
 
-        st.markdown(
-            """
-            <div class="panel">
-                <div class="panel-title">🔬 Project Approach</div>
-                Image preprocessing, handcrafted feature extraction,
-                and Support Vector Machine classification.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+# ==========================================
+# FOOTER
+# ==========================================
 
-    st.markdown("### Project Workflow")
-
-    st.markdown("""
-    1. Retinal image upload
-    2. Image resizing and preprocessing
-    3. Extraction of 13 numerical features
-    4. SVM model prediction
-    5. Display of predicted DR class
-    """)
-
-# ==================================================
-# 9. MODEL INFORMATION
-# ==================================================
-
-elif page == "⚙️ Model Information":
-
-    st.markdown("## Model Information")
-
-    c1, c2, c3 = st.columns(3)
-
-    c1.metric("Algorithm", "SVM")
-    c2.metric("Input Features", "13")
-    c3.metric("Output Classes", "5")
-
-    st.markdown("### Feature Engineering")
-
-    st.markdown("""
-    | Feature category | Extracted features |
-    |---|---|
-    | Color | RGB mean and standard deviation |
-    | Texture | Contrast, Homogeneity, Energy, Correlation |
-    | Brightness | Mean, Standard deviation, Range |
-    """)
-
-    st.markdown("### Model File")
-
-    st.code("model.pkl")
-
-    if MODEL_LOADED:
-        st.success("Your model.pkl file is loaded.")
-    else:
-        st.error(f"Model unavailable: {MODEL_ERROR}")
-
-# ==================================================
-# 10. DR CLASSIFICATION GUIDE
-# ==================================================
-
-elif page == "📊 DR Classification":
-
-    st.markdown("## DR Severity Classification")
-
-    for i, data in DR_CLASSES.items():
-
-        st.markdown(
-            f"""
-            <div class="panel"
-            style="border-left:5px solid {data['color']};">
-                <h3 style="color:{data['color']};">
-                    Grade {i} — {data['name']}
-                </h3>
-                <p class="muted">{data['description']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-# ==================================================
-# 11. DISCLAIMER
-# ==================================================
-
-elif page == "⚠️ Disclaimer":
-
-    st.markdown("## Medical Disclaimer")
-
-    st.error(
-        """
-        DiabeticRetina AI is an academic prototype.
-        It is not a clinically validated medical device.
-        It must not be used to diagnose, rule out, or treat
-        diabetic retinopathy.
-        """
-    )
-
-    st.write(
-        """
-        - Predictions may be incorrect.
-        - Image quality can affect model output.
-        - Model probabilities are not clinical certainty.
-        - Always consult a qualified eye-care professional.
-        """
-    )
-
+st.markdown("""
+<div class="footer">
+    DiabeticRetina AI | Academic Machine Learning Project<br>
+    AI-assisted retinal image classification prototype
+</div>
+""", unsafe_allow_html=True)
